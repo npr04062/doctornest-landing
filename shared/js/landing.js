@@ -1,0 +1,439 @@
+/* doctornest.ai 랜딩 동작을 바닐라 JS로 옮긴 것.
+   원본 React 모듈: LandingHeader · LandingMotion · HeroMotion · ProductShowcase · MarketingPlayback · FaqAccordion · ConsultationForm
+   추가: 접수 엔드포인트 전송, 동의 체크, 완료 패널, 트래킹 이벤트, 변형 B 요소(하단 고정 바) */
+(function () {
+  'use strict';
+  var CFG = window.DN_CONFIG || {};
+  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname) && new URLSearchParams(location.search).get('mock') === '1') {
+    CFG = Object.assign({}, CFG, { LEAD_ENDPOINT: '/mock-lead', LEAD_MODE: 'cors' });
+  }
+  var variant = window.DN_VARIANT || 'a';
+  var track = function (name, params) { if (window.dnTrack) window.dnTrack(name, params); };
+  var clamp = function (x) { return Math.max(0, Math.min(1, x)); };
+  var reduce = matchMedia('(prefers-reduced-motion: reduce)');
+  var root = document.querySelector('.landing-module__i9Fx1W__landing');
+  if (!root) return;
+  var $ = function (sel, el) { return (el || root).querySelector(sel); };
+  var $$ = function (sel, el) { return Array.prototype.slice.call((el || root).querySelectorAll(sel)); };
+
+  /* ---------- 설정 경고(접수 엔드포인트 미설정) ---------- */
+  var note = document.querySelector('.dn-devnote');
+  var isLocal = /^(localhost|127\.0\.0\.1)$/.test(location.hostname) || new URLSearchParams(location.search).get('debug') === '1';
+  if (note && isLocal) {
+    var missing = [];
+    if (!CFG.LEAD_ENDPOINT) missing.push('LEAD_ENDPOINT(접수 저장 안 됨)');
+    if (!CFG.GA4_ID) missing.push('GA4_ID');
+    if (missing.length) { note.textContent = '설정 필요 · config.js: ' + missing.join(', '); note.hidden = false; }
+  }
+  if (!CFG.LEAD_ENDPOINT && window.console) console.warn('[doctornest landing] config.js LEAD_ENDPOINT 비어 있음: 접수가 저장되지 않습니다.');
+
+  /* ---------- 카카오톡 채널 채팅 버튼(설정 KAKAO_CHAT_URL) ---------- */
+  var kakaoUrl = (CFG.KAKAO_CHAT_URL || '').trim();
+  $$('[data-kakao]', document).forEach(function (a) { if (kakaoUrl) { a.href = kakaoUrl; a.hidden = false; } else { a.hidden = true; } });
+
+  /* ---------- 소개 영상(설정 VIDEO_ID): 썸네일 먼저, 클릭하면 유튜브 플레이어 ---------- */
+  var videoSec = document.getElementById('video');
+  if (videoSec && /^[A-Za-z0-9_-]{6,}$/.test(CFG.VIDEO_ID || '')) {
+    var vid = CFG.VIDEO_ID, vFrame = $('[data-video]', videoSec), thumb = $('.dn-video-thumb', videoSec), cap = $('.dn-video-caption', videoSec);
+    thumb.src = 'https://i.ytimg.com/vi/' + vid + '/maxresdefault.jpg';
+    thumb.addEventListener('error', function () { if (thumb.src.indexOf('maxres') > -1) thumb.src = 'https://i.ytimg.com/vi/' + vid + '/hqdefault.jpg'; });
+    if (cap) cap.textContent = CFG.VIDEO_TITLE || '';
+    videoSec.hidden = false;
+    $('.dn-video-play', videoSec).addEventListener('click', function () {
+      var f = document.createElement('iframe');
+      f.src = 'https://www.youtube-nocookie.com/embed/' + vid + '?autoplay=1&rel=0&modestbranding=1&playsinline=1';
+      f.title = CFG.VIDEO_TITLE || '소개 영상'; f.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share'; f.setAttribute('allowfullscreen', '');
+      vFrame.innerHTML = ''; vFrame.appendChild(f);
+      track('video_play', { video_id: vid, title: (CFG.VIDEO_TITLE || '').slice(0, 60) });
+    });
+  }
+
+  /* ---------- 헤더 · 모바일 메뉴 ---------- */
+  var header = $('.landing-module__i9Fx1W__header');
+  var menuBtn = header && $('.landing-module__i9Fx1W__menuButton', header);
+  var mobileMenu = document.getElementById('landing-mobile-menu');
+  if (menuBtn && mobileMenu) {
+    var ICON_MENU = menuBtn.innerHTML;
+    var ICON_X = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-x" aria-hidden="true"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg>';
+    var setMenu = function (open) {
+      mobileMenu.hidden = !open;
+      menuBtn.setAttribute('aria-expanded', String(open));
+      menuBtn.setAttribute('aria-label', open ? '메뉴 닫기' : '메뉴 열기');
+      menuBtn.innerHTML = open ? ICON_X : ICON_MENU;
+    };
+    menuBtn.addEventListener('click', function () { setMenu(mobileMenu.hidden); });
+    $$('a', mobileMenu).forEach(function (a) { a.addEventListener('click', function () { setMenu(false); }); });
+    var logo = $('.landing-module__i9Fx1W__logo', header);
+    logo && logo.addEventListener('click', function () { setMenu(false); });
+    header.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !mobileMenu.hidden) { setMenu(false); menuBtn.focus(); } });
+  }
+
+  /* ---------- LandingMotion: 등장 애니메이션 · 숫자 카운트 · 플로팅 CTA · 현재 섹션 표시 ---------- */
+  var about = $('#about'), consult = $('#consultation');
+  var scrollCta = $('[data-scroll-cta]');
+  var dock = document.querySelector('.dn-dock');
+  var sectionLinks = $$('[data-section-link]');
+  var navSections = ['about', 'difference', 'product', 'pricing', 'faq'].map(function (id) { return $('#' + id); });
+  var io = null, anims = [], rafs = [], counted = [], ticking = 0;
+
+  function countUp(el) {
+    var target = Number(el.dataset.count), suffix = el.dataset.suffix || '';
+    counted.push([el, el.textContent]);
+    var start = performance.now();
+    var step = function (now) {
+      var t = clamp((now - start) / 1200);
+      el.textContent = Math.round(target * (1 - Math.pow(1 - t, 3))).toLocaleString('ko-KR') + suffix;
+      if (t < 1) rafs.push(requestAnimationFrame(step));
+    };
+    step(start);
+  }
+  function resetMotion() {
+    io && io.disconnect();
+    anims.forEach(function (a) { a.cancel(); }); anims = [];
+    rafs.forEach(cancelAnimationFrame); rafs = [];
+    counted.forEach(function (p) { p[0].textContent = p[1]; }); counted = [];
+  }
+  var FROM = { rise: 'translateY(16px)', up: 'translateY(32px)', left: 'translateX(-20px)', chip: 'translateX(-12px)', pop: 'scale(.55)', grow: 'scaleY(0)', scale: 'scale(.94)', fade: '' };
+  function setupMotion() {
+    resetMotion();
+    if (reduce.matches) { frame(); return; }
+    var groups = new Map();
+    $$('[data-reveal-group]').forEach(function (g) {
+      if (g.dataset.revealed) return;
+      var list = [];
+      [g].concat($$('[data-motion]', g)).filter(function (el) { return el.dataset.motion && el.closest('[data-reveal-group]') === g; }).forEach(function (el) {
+        var kind = el.dataset.motion, cs = getComputedStyle(el), base = cs.transform === 'none' ? '' : cs.transform, delay = Number(el.dataset.delay || 0);
+        var add = function (kf, dur, ease) {
+          var a = el.animate(kf, { duration: dur, delay: delay, easing: ease, fill: 'backwards' });
+          a.pause(); a.currentTime = 0; anims.push(a); list.push(a);
+        };
+        if (kind === 'draw') { add([{ strokeDashoffset: '1' }, { strokeDashoffset: '0' }], 2000, 'cubic-bezier(.45,0,.2,1)'); return; }
+        add([{ opacity: 0 }, { opacity: cs.opacity }], kind === 'chip' ? 500 : 600, 'ease');
+        if (kind !== 'fade') {
+          var from = (base + ' ' + (FROM[kind || 'rise'] || '')).trim() || 'none';
+          add([{ transform: from }, { transform: base || 'none' }], kind === 'pop' ? 500 : kind === 'chip' ? 650 : 800,
+            kind === 'pop' ? 'cubic-bezier(.34,1.56,.64,1)' : kind === 'chip' ? 'cubic-bezier(.22,.61,.36,1)' : 'cubic-bezier(.2,.7,.2,1)');
+        }
+      });
+      groups.set(g, list);
+    });
+    io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (en) {
+        if (!en.isIntersecting) return;
+        en.target.dataset.revealed = 'true';
+        (groups.get(en.target) || []).forEach(function (a) { a.play(); });
+        $$('[data-count]', en.target).forEach(countUp);
+        io.unobserve(en.target);
+      });
+    }, { rootMargin: '0px 0px -6% 0px', threshold: 0 });
+    groups.forEach(function (_, g) { io.observe(g); });
+    frame();
+  }
+  function frame() {
+    ticking = 0;
+    var vh = innerHeight;
+    var show = !!about && about.getBoundingClientRect().bottom <= 44 && !!consult && consult.getBoundingClientRect().top >= .75 * vh;
+    if (dock) { dock.dataset.visible = String(show); }
+    var cur = '';
+    navSections.forEach(function (s) { if (s && s.getBoundingClientRect().top <= .4 * vh) cur = s.id; });
+    if (cur === 'difference') cur = 'about';
+    sectionLinks.forEach(function (a) { if (a.hash === '#' + cur) a.setAttribute('aria-current', 'location'); else a.removeAttribute('aria-current'); });
+    if (scrollCta) {
+      var p = 1 - Math.pow(1 - (reduce.matches ? 1 : clamp((vh - scrollCta.parentElement.getBoundingClientRect().top) / (.7 * vh))), 3);
+      scrollCta.style.transform = 'translateY(' + ((1 - p) * 60) + 'px) scale(' + (.88 + .12 * p) + ')';
+      scrollCta.style.opacity = String(.3 + .7 * p);
+      scrollCta.style.backgroundPosition = ((1 - p) * 40) + '% 0';
+    }
+  }
+  var onScroll = function () { if (!ticking) ticking = requestAnimationFrame(frame); };
+  setupMotion();
+  addEventListener('scroll', onScroll, { passive: true });
+  addEventListener('resize', onScroll);
+  reduce.addEventListener('change', setupMotion);
+
+  /* ---------- HeroMotion: 스크롤에 따라 히어로 영상을 문지르는 효과 ---------- */
+  var heroTrack = $('.landing-module__i9Fx1W__heroTrack'), heroStage = $('.landing-module__i9Fx1W__heroStage'), heroVideo = $('.landing-module__i9Fx1W__heroVideo');
+  if (heroTrack && heroStage) {
+    var hRaf = 0, hCur = 0, hTarget = 0, hDist = 0, hTop = 64, hLast = 0, hVisible = false;
+    var hSeekTarget = -1, hSeekFails = 0, hSeekBroken = false;   // Range 요청을 못 받는 서버에서는 seek가 0초로 튕기며 폭주하므로 3번 실패하면 스크럽을 끈다
+    var hPaint = function () {
+      heroStage.style.setProperty('--hero-progress', String(hCur));
+      var g = Math.round(245 + 10 * clamp((hCur - .75) / .2));
+      heroStage.style.setProperty('--hero-background', 'rgb(' + g + ' ' + g + ' ' + g + ')');
+      heroStage.style.setProperty('--hero-screen-opacity', String(1 - clamp((hCur - .17) / .16)));
+      heroStage.style.setProperty('--hero-brand-opacity', String(clamp((hCur - .21) / .12) * (1 - clamp((hCur - .75) / .18))));
+      heroStage.style.setProperty('--hero-brand-scale', String(.94 + .06 * clamp(hCur / .7)));
+      heroStage.style.setProperty('--hero-spread', (1.7 * clamp((hCur - .62) / .25)) + 'em');
+      heroStage.style.setProperty('--hero-split', (400 * clamp((hCur - .75) / .15)) + '%');
+      if (heroVideo && !hSeekBroken && heroVideo.readyState >= 2 && !heroVideo.seeking && isFinite(heroVideo.duration)) {
+        var t = hCur * Math.max(0, heroVideo.duration - 1 / 30);
+        if (Math.abs(heroVideo.currentTime - t) > .012) { hSeekTarget = t; heroVideo.currentTime = t; }
+      }
+    };
+    var hTick = function (now) {
+      var dt = Math.min(64, now - (hLast || now - 16.67));
+      hLast = now;
+      hCur += (hTarget - hCur) * (1 - Math.pow(.86, dt / 16.67));
+      if (Math.abs(hTarget - hCur) < 5e-4) hCur = hTarget;
+      hPaint();
+      hRaf = (hCur !== hTarget && hVisible) ? requestAnimationFrame(hTick) : 0;
+    };
+    var hUpdate = function () {
+      hTarget = hDist ? clamp((hTop - heroTrack.getBoundingClientRect().top) / hDist) : 0;
+      if (hVisible && hDist && !document.hidden && heroVideo && !heroVideo.getAttribute('src')) { heroVideo.src = heroVideo.dataset.src; heroVideo.load(); }
+      if (!hRaf && hVisible && !document.hidden) { hLast = 0; hRaf = requestAnimationFrame(hTick); }
+    };
+    var hLayout = function () {
+      var linked = !reduce.matches && innerHeight >= 600;
+      heroTrack.dataset.scrollLinked = String(linked);
+      var mw = Math.max(280, Math.min(1260, (innerHeight - 112) * 3024 / 1706));
+      heroStage.style.maxWidth = linked ? mw + 'px' : '';
+      hTop = Math.max(64, (innerHeight - heroStage.offsetHeight) / 2 + 22);
+      hDist = linked ? Math.max(600, 1.5 * innerHeight) : 0;
+      heroTrack.style.setProperty('--hero-top', hTop + 'px');
+      heroTrack.style.setProperty('--hero-distance', hDist + 'px');
+      heroTrack.style.height = linked ? (heroStage.offsetHeight + hDist) + 'px' : '';
+      if (!linked) { hTarget = hCur = 0; hPaint(); }
+      hUpdate();
+    };
+    new IntersectionObserver(function (es) { hVisible = es[0].isIntersecting; if (hVisible) hUpdate(); }, { rootMargin: '200px' }).observe(heroTrack);
+    new ResizeObserver(hLayout).observe(heroStage);
+    hLayout();
+    if (heroVideo) {
+      heroVideo.addEventListener('loadeddata', hPaint);
+      heroVideo.addEventListener('seeked', function () {
+        if (hSeekTarget >= 0 && Math.abs(heroVideo.currentTime - hSeekTarget) > .05) {
+          if (++hSeekFails >= 3) { hSeekBroken = true; if (window.console) console.warn('[landing] 히어로 영상 seek 실패(서버가 Range 요청을 지원하지 않는 듯). 스크럽을 끕니다.'); return; }
+        } else hSeekFails = 0;
+        hPaint();
+      });
+    }
+    addEventListener('scroll', hUpdate, { passive: true });
+    addEventListener('resize', hLayout);
+    reduce.addEventListener('change', hLayout);
+    document.addEventListener('visibilitychange', function () { if (document.hidden) { cancelAnimationFrame(hRaf); hRaf = 0; } else hUpdate(); });
+  }
+
+  /* ---------- ProductShowcase: 스크롤 연동 탭(마케팅 ↔ 상담) ---------- */
+  var prod = $('#product');
+  if (prod) {
+    var pFrame = $('.landing-module__i9Fx1W__product', prod), pCopy = $('.landing-module__i9Fx1W__productCopy', prod);
+    var STEPS = ['marketing', 'chat'];
+    var pStep = prod.dataset.step || 'marketing', pLinked = false, pDist = 0, pRafS = 0, pRafL = 0;
+    var setStep = function (id) {
+      if (pStep === id) return;
+      pStep = id; prod.dataset.step = id;
+      STEPS.forEach(function (s) {
+        var on = s === id;
+        var btn = document.getElementById('product-' + s); btn && btn.setAttribute('aria-expanded', String(on));
+        var d = document.getElementById('product-' + s + '-description'); if (d) { d.dataset.active = String(on); d.setAttribute('aria-hidden', String(!on)); }
+        var p = document.getElementById('product-' + s + '-panel'); if (p) { p.dataset.active = String(on); p.setAttribute('aria-hidden', String(!on)); p.inert = !on; }
+      });
+    };
+    var pOnScroll = function () { pRafS = 0; if (pLinked) setStep((64 - prod.getBoundingClientRect().top) / pDist < .5 ? 'marketing' : 'chat'); };
+    var pLayout = function () {
+      pRafL = 0;
+      var tabs = $$('[data-product-step]', pCopy);
+      var hsum = tabs.reduce(function (acc, t) { var cs = getComputedStyle(t); var h3 = t.querySelector('h3'); return acc + (h3 ? h3.offsetHeight : 0) + parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom); }, 0);
+      var pmax = Math.max.apply(null, tabs.map(function (t) { var p = t.querySelector('p'); return (p ? p.offsetHeight : 0) + 8; }));
+      prod.style.setProperty('--product-tabs-height', (hsum + pmax) + 'px');
+      pLinked = false; delete prod.dataset.scrollLinked;
+      if (reduce.matches || innerHeight < 600) return;
+      prod.dataset.scrollLinked = 'true';
+      var cs = getComputedStyle(pFrame), mobile = matchMedia('(max-width: 899px)').matches;
+      var avail = innerHeight - 64 - parseFloat(cs.paddingTop) - parseFloat(cs.paddingBottom);
+      var mediaH = avail - (mobile ? pCopy.offsetHeight + parseFloat(cs.rowGap) : 0);
+      if (mediaH < 160 || (!mobile && pCopy.offsetHeight > avail)) { delete prod.dataset.scrollLinked; return; }
+      prod.style.setProperty('--product-media-limit', (710 * mediaH / 552) + 'px');
+      prod.style.setProperty('--product-frame-height', pFrame.offsetHeight + 'px');
+      pDist = Math.max(700, 1.4 * innerHeight);
+      prod.style.setProperty('--product-distance', pDist + 'px');
+      pLinked = true;
+      pOnScroll();
+    };
+    var pRo = new ResizeObserver(function () { if (!pRafL) pRafL = requestAnimationFrame(pLayout); });
+    pRo.observe(pFrame); pRo.observe(pCopy); $$('p', pCopy).forEach(function (p) { pRo.observe(p); });
+    addEventListener('scroll', function () { if (!pRafS) pRafS = requestAnimationFrame(pOnScroll); }, { passive: true });
+    addEventListener('resize', function () { if (!pRafL) pRafL = requestAnimationFrame(pLayout); });
+    reduce.addEventListener('change', pLayout);
+    STEPS.forEach(function (s, i) {
+      var btn = document.getElementById('product-' + s);
+      btn && btn.addEventListener('click', function () {
+        if (!pLinked) { setStep(s); return; }
+        var y = scrollY + prod.getBoundingClientRect().top - 64;
+        scrollTo({ top: y + pDist * ((i + .5) / STEPS.length), behavior: 'smooth' });
+      });
+    });
+    pLayout();
+
+    /* MarketingPlayback: 마케팅 탭이 보일 때만 영상 재생 */
+    var pb = $('.landing-module__i9Fx1W__marketingPlayback', prod), mv = $('.landing-module__i9Fx1W__marketingVideo', prod);
+    if (pb) {
+      var pbIn = false, wasMk = true;
+      var pbSync = function () {
+        var mk = prod.getAttribute('data-step') === 'marketing';
+        var on = pbIn && mk && !document.hidden && !reduce.matches;
+        pb.dataset.playing = String(on);
+        if (mv) {
+          if (on) { if (!mv.getAttribute('src')) mv.src = mv.dataset.src; if (!wasMk) mv.currentTime = 0; var pr = mv.play(); pr && pr.catch && pr.catch(function () {}); }
+          else mv.pause();
+        }
+        wasMk = mk;
+      };
+      new IntersectionObserver(function (es) { pbIn = es[0].isIntersecting; pbSync(); }).observe(pb);
+      new MutationObserver(pbSync).observe(prod, { attributes: true, attributeFilter: ['data-step'] });
+      reduce.addEventListener('change', pbSync);
+      document.addEventListener('visibilitychange', pbSync);
+    }
+  }
+
+  /* ---------- FAQ 아코디언 ---------- */
+  var faqList = $('.landing-module__i9Fx1W__faqList');
+  if (faqList) {
+    var items = $$('.landing-module__i9Fx1W__faqItem', faqList), open = 0;
+    var renderFaq = function () {
+      items.forEach(function (it, i) {
+        var on = open === i, btn = it.querySelector('button'), ans = it.querySelector('.landing-module__i9Fx1W__faqAnswer');
+        btn.setAttribute('aria-expanded', String(on));
+        if (ans) { ans.dataset.active = String(on); ans.setAttribute('aria-hidden', String(!on)); }
+      });
+    };
+    items.forEach(function (it, i) {
+      it.querySelector('button').addEventListener('click', function () {
+        open = open === i ? null : i; renderFaq();
+        if (open === i) track('faq_open', { question: it.querySelector('button').textContent.trim().slice(0, 60) });
+      });
+    });
+  }
+
+  /* ---------- 상담 신청 폼 ---------- */
+  var form = $('form.consultation-form-module___58eVG__form');
+  if (form) {
+    var SOURCES = { INSTAGRAM: 1, YOUTUBE: 1, REFERRAL: 1, SEARCH: 1, OTHER: 1 };
+    var fieldset = form.querySelector('fieldset.consultation-form-module___58eVG__fields');
+    var submit = form.querySelector('button[type=submit]');
+    var phone = form.elements.phone;
+    var state = 'idle', sending = false, reqKey = null, lastPayload = null, toastTimer = 0, started = false;
+    var setState = function (s) {
+      state = s;
+      form.setAttribute('aria-busy', String(s === 'sending'));
+      if (fieldset) fieldset.disabled = (s === 'sending');
+      submit.disabled = (s !== 'idle');
+      submit.textContent = s === 'sending' ? '접수 중…' : s === 'done' ? '신청 완료' : '무료 상담하기';
+    };
+    if (phone) phone.addEventListener('input', function () {
+      var d = phone.value.replace(/\D/g, '').slice(0, 11), i = d.indexOf('02') === 0 ? 2 : 3;
+      phone.value = d.length <= i ? d : d.length <= i + 4 ? d.slice(0, i) + '-' + d.slice(i) : d.slice(0, i) + '-' + d.slice(i, -4) + '-' + d.slice(-4);
+    });
+    form.addEventListener('input', function (e) { if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid'); if (state !== 'done') setState('idle'); });
+    form.addEventListener('focusin', function () { if (!started) { started = true; track('form_start', {}); } });
+    var toast = function (kind, text) {
+      var pos = document.querySelector('.consultation-form-module___58eVG__toastPosition');
+      if (!pos) {
+        pos = document.createElement('div'); pos.className = 'consultation-form-module___58eVG__toastPosition';
+        pos.innerHTML = '<div class="consultation-form-module___58eVG__toast" aria-atomic="true"><img alt="" width="20" height="20"><span></span></div>';
+        document.body.appendChild(pos);
+      }
+      var t = pos.firstElementChild;
+      t.setAttribute('role', kind === 'error' ? 'alert' : 'status');
+      t.querySelector('img').src = (CFG.ASSET_BASE || 'assets/') + 'img/form-' + kind + '.svg';
+      t.querySelector('span').textContent = text;
+      t.dataset.visible = 'true'; t.setAttribute('aria-hidden', 'false');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.dataset.visible = 'false'; t.setAttribute('aria-hidden', 'true'); }, 3000);
+    };
+    var fail = function (errors, msg) {
+      var first = Object.keys(errors)[0];
+      if (first) { var el = form.elements.namedItem(first); if (el && el.setAttribute) { el.setAttribute('aria-invalid', 'true'); el.focus && el.focus(); } }
+      toast('error', msg || errors[first] || '입력 내용을 확인해 주세요.');
+    };
+    var validate = function () {
+      var errors = {};
+      var clean = function (n) {
+        var v = (form.elements[n] && form.elements[n].value) || '';
+        if (v.length > 100 || /[\u0000-\u001f\u007f]/.test(v)) { errors[n] = '100자 이내의 올바른 내용을 입력해 주세요.'; return null; }
+        return v.trim() || null;
+      };
+      var businessName = clean('businessName'), contactName = clean('contactName');
+      var raw = (phone ? phone.value : '').trim(), digits = raw.replace(/[\s()-]/g, '');
+      if (!raw) errors.phone = '연락받으실 전화번호를 입력해 주세요.';
+      else if (!/^0\d{8,10}$/.test(digits) || raw.length > 30) errors.phone = '연락 가능한 전화번호를 확인해 주세요.';
+      var srcEl = form.querySelector('input[name=source]:checked'), src = srcEl ? srcEl.value : '';
+      if (src && !SOURCES[src]) errors.source = '서비스를 알게 된 경로를 다시 선택해 주세요.';
+      var consent = form.elements.consent;
+      if (consent && !consent.checked) errors.consent = '개인정보 수집·이용에 동의해 주세요.';
+      return Object.keys(errors).length ? { ok: false, errors: errors } : { ok: true, data: { businessName: businessName, contactName: contactName, phone: digits, source: src || null } };
+    };
+    var showThanks = function () {
+      var box = document.createElement('div');
+      box.className = 'dn-thanks'; box.setAttribute('role', 'status');
+      box.innerHTML = '<strong>상담 신청이 접수되었어요.</strong><p>담당자가 곧 연락드릴게요. 바로 통화를 원하시면 아래 번호로 전화해 주세요.</p>' +
+        '<a class="landing-module__i9Fx1W__consultationButton" href="tel:' + (CFG.PHONE_RAW || '') + '" data-track="phone_click" data-loc="thanks">' + (CFG.PHONE_DISPLAY || '') + ' 전화하기</a>' +
+        (kakaoUrl ? '<br><a class="dn-kakao-btn" href="' + kakaoUrl + '" target="_blank" rel="noopener" data-track="kakao_click" data-loc="thanks">카카오톡으로 이어서 상담</a>' : '');
+      form.hidden = true;
+      form.insertAdjacentElement('afterend', box);
+    };
+    form.addEventListener('submit', function (e) {
+      e.preventDefault();
+      if (sending || state === 'done') return;
+      var v = validate();
+      if (!v.ok) { fail(v.errors); track('form_error', { field: Object.keys(v.errors)[0] }); return; }
+      var payloadStr = JSON.stringify(v.data);
+      if (lastPayload !== payloadStr || !reqKey) { lastPayload = payloadStr; reqKey = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(16).slice(2)); }
+      if (!CFG.LEAD_ENDPOINT) { fail({}, '접수 서버가 아직 연결되지 않았습니다. 전화로 문의해 주세요.'); return; }
+      sending = true; setState('sending');
+      var body = Object.assign({}, v.data, {
+        requestKey: reqKey, website: new FormData(form).get('website') || '', variant: variant, brand: CFG.BRAND || '',
+        page: location.href.slice(0, 300), referrer: (document.referrer || '').slice(0, 300),
+        attrib: window.dnAttrib ? window.dnAttrib() : {}, userAgent: navigator.userAgent.slice(0, 200), submittedAt: new Date().toISOString()
+      });
+      var ctl = new AbortController(), to = setTimeout(function () { ctl.abort(); }, 15000);
+      fetch(CFG.LEAD_ENDPOINT, { method: 'POST', mode: CFG.LEAD_MODE || 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body), signal: ctl.signal })
+        .then(function (res) {
+          if (res.type === 'opaque') return { ok: true };
+          return res.json().catch(function () { return {}; }).then(function (j) {
+            if (!res.ok || j.ok === false) { if (res.status === 409) reqKey = null; return { ok: false, errors: j.errors || {}, error: j.error }; }
+            return { ok: true };
+          });
+        })
+        .then(function (r) {
+          if (!r.ok) { setState('idle'); fail(r.errors, r.error || '접수하지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
+          setState('done');
+          toast('success', '상담 신청이 접수되었어요. 담당자가 곧 연락드릴게요.');
+          showThanks();
+          track('generate_lead', { source: v.data.source || '', request_key: reqKey });
+        })
+        .catch(function () { setState('idle'); toast('error', '접수 결과를 확인하지 못했어요. 잠시 후 다시 시도해 주세요.'); })
+        .then(function () { clearTimeout(to); sending = false; });
+    });
+  }
+
+  /* ---------- 트래킹: 클릭 · 섹션 도달 · 스크롤 깊이 ---------- */
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a,button');
+    if (!a) return;
+    var name = a.dataset.track, href = a.getAttribute('href') || '';
+    if (!name && href.indexOf('tel:') === 0) name = 'phone_click';
+    if (!name && /kakao/i.test(href)) name = 'kakao_click';
+    if (!name && (href === '#consultation' || /doctornest\.ai\/service|\/login|\/downloads/.test(href))) name = 'cta_click';
+    if (!name) return;
+    track(name, { location: a.dataset.loc || (a.closest('section,header,footer') || {}).id || (a.closest('header') ? 'header' : a.closest('footer') ? 'footer' : 'floating'), label: (a.textContent || '').trim().slice(0, 40), href: href.slice(0, 120) });
+  }, true);
+  var seen = {};
+  var secIo = new IntersectionObserver(function (es) {
+    es.forEach(function (en) {
+      if (!en.isIntersecting || seen[en.target.id]) return;
+      seen[en.target.id] = true;
+      track('section_view', { section: en.target.id });
+      if (en.target.id === 'pricing') track('pricing_view', {});
+      secIo.unobserve(en.target);
+    });
+  }, { threshold: 0.3 });
+  ['about', 'video', 'difference', 'product', 'care', 'results', 'pricing', 'faq', 'consultation'].forEach(function (id) { var s = document.getElementById(id); s && secIo.observe(s); });
+  var depths = [25, 50, 75, 90], fired = {};
+  addEventListener('scroll', function () {
+    var max = document.documentElement.scrollHeight - innerHeight; if (max <= 0) return;
+    var pct = Math.round(scrollY / max * 100);
+    depths.forEach(function (d) { if (pct >= d && !fired[d]) { fired[d] = true; track('scroll_depth', { percent: d }); } });
+  }, { passive: true });
+})();

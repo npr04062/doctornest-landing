@@ -1,0 +1,103 @@
+/* 클론에 추가된 스타일. 원본 landing.css는 손대지 않고 여기서만 덧붙인다. */
+
+/* 변형 토글: <html data-variant="a|b"> */
+html[data-variant="a"] .dn-b { display: none !important; }
+html[data-variant="b"] .dn-a { display: none !important; }
+
+/* 설정 경고(접수 엔드포인트·GA4 미설정 시). 운영 전 반드시 사라져야 한다 */
+.dn-devnote { position: fixed; left: 12px; bottom: 96px; z-index: 300; max-width: min(320px, calc(100vw - 24px)); padding: 8px 12px; border-radius: 10px; background: #b91c1c; color: #fff; font-size: 12px; line-height: 1.4; box-shadow: 0 10px 30px rgba(0,0,0,.18); opacity: .92; }
+.dn-devnote[hidden] { display: none; }
+
+/* 개인정보 동의 */
+.dn-consent { display: flex; gap: 10px; align-items: flex-start; margin-top: 18px; font-size: 14px; line-height: 1.55; color: #fff; text-align: left; cursor: pointer; }
+.dn-consent input { flex: none; width: 18px; height: 18px; margin-top: 2px; accent-color: #fff; cursor: pointer; }
+.dn-consent input[aria-invalid="true"] { outline: 2px solid #ff4d4f; outline-offset: 2px; border-radius: 3px; }
+.dn-consent a { color: #fff; text-decoration: underline; text-underline-offset: 2px; display: inline-block; padding: 6px 2px; margin: -6px -2px; }
+
+/* 접수 완료 패널(폼 자리에 표시) */
+.dn-thanks { margin-top: 32px; padding: 28px 24px; border-radius: 20px; background: rgba(255,255,255,.18); backdrop-filter: blur(10px); color: #fff; text-align: center; }
+.dn-thanks strong { display: block; font-size: 22px; font-weight: 700; letter-spacing: -.4px; }
+.dn-thanks p { margin: 10px 0 0; font-size: 15px; line-height: 1.6; opacity: .92; }
+.dn-thanks a { margin-top: 20px; }
+
+/* ---------- 변형 B 요소 ---------- */
+/* 헤더 CTA(로그인 자리) */
+.dn-header-cta { white-space: nowrap; }
+
+/* 히어로 보조 CTA + 한 줄 조건 */
+.dn-hero-actions { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.dn-hero-sub { margin: 12px 0 0; font-size: 13px; line-height: 1.5; color: #5b6178; }
+.dn-outline { border: 1px solid var(--brand-primary-border, #dbe3ff); color: var(--brand-primary, #3157f6); background: #fff; }
+.dn-outline:hover { background: var(--brand-primary-muted-soft, #f2f5ff); }
+
+/* 신뢰 조건 스트립(히어로 아래) */
+.dn-trust { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 12px; margin: 0 auto; padding: 0 var(--landing-gutter, 20px) 8px; max-width: 1200px; list-style: none; }
+.dn-trust li { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 999px; background: var(--brand-primary-muted-soft, #f2f5ff); color: var(--brand-text, #20243a); font-size: 13px; font-weight: 600; letter-spacing: -.2px; }
+.dn-trust li::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--brand-primary, #3157f6); }
+
+/* 중간 CTA 띠(문제/해결 카드 뒤) */
+.dn-band { margin: 0 auto; padding: 56px var(--landing-gutter, 20px); text-align: center; background: var(--brand-primary-muted-soft, #f2f5ff); }
+.dn-band p { margin: 0 0 18px; font-size: clamp(18px, 2.2vw, 24px); font-weight: 700; letter-spacing: -.5px; color: var(--brand-text, #20243a); line-height: 1.4; }
+.dn-band small { display: block; margin-top: 12px; font-size: 13px; color: #5b6178; }
+
+/* 요금: 연말 이벤트 블록 */
+html[data-variant="b"] .dn-price-a { display: none !important; }
+.dn-event { padding-bottom: 20px; color: #fff; }
+.dn-event .dn-event-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.dn-event strong { font-size: clamp(40px, 5vw, 56px); font-weight: 800; letter-spacing: -1.5px; line-height: 1; }
+.dn-event strong small { font-size: 18px; font-weight: 600; letter-spacing: -.3px; margin-left: 4px; }
+.dn-event .dn-tag { padding: 6px 12px; border-radius: 999px; background: rgba(255,255,255,.14); font-size: 13px; font-weight: 600; }
+.dn-event p { margin: 12px 0 0; font-size: 14px; line-height: 1.6; opacity: .85; }
+.dn-event .dn-event-cta { margin-top: 18px; display: inline-flex; }
+
+
+
+/* ---------- 빠른 문의 독(양쪽 변형 공통): 카카오 · 전화 · 상담 신청 ---------- */
+.landing-module__i9Fx1W__floatingCta { display: none !important; }
+.dn-dock { position: fixed; right: 20px; bottom: calc(20px + env(safe-area-inset-bottom)); z-index: 56; display: flex; flex-direction: column; gap: 8px; opacity: 0; visibility: hidden; transform: translateY(12px); transition: opacity .25s, transform .25s, visibility 0s .25s; }
+.dn-dock[data-visible="true"] { opacity: 1; visibility: visible; transform: none; transition-delay: 0s; }
+.dn-dock-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 48px; padding: 0 18px 0 14px; border-radius: 999px; font-size: 14px; font-weight: 700; letter-spacing: -.3px; box-shadow: 0 10px 28px rgba(20, 20, 80, .18); transition: transform .2s, background .2s, box-shadow .2s; cursor: pointer; }
+.dn-dock-btn:hover { transform: translateY(-1px); }
+.dn-dock-btn svg { flex: none; }
+.dn-kakao { background: #fee500; color: #191919; }
+.dn-kakao:hover { background: #f5dc00; }
+.dn-tel { background: #fff; color: var(--brand-primary, #3157f6); border: 1px solid var(--brand-primary-border, #dbe3ff); }
+.dn-tel:hover { background: var(--brand-primary-muted-soft, #f2f5ff); }
+.dn-form { background: var(--brand-primary, #3157f6); color: #fff; }
+.dn-form:hover { background: var(--brand-primary-hover, #274ad1); }
+.dn-dock-btn[hidden] { display: none; }
+@media (max-width: 899px) {
+  .dn-dock { left: 0; right: 0; bottom: 0; flex-direction: row; gap: 8px; padding: 10px 12px calc(10px + env(safe-area-inset-bottom)); background: rgba(255,255,255,.94); backdrop-filter: blur(12px); border-top: 1px solid #e2e7f5; transform: translateY(110%); }
+  .dn-dock-btn { flex: 1; justify-content: center; padding: 0 8px; box-shadow: none; font-size: 14px; }
+  .dn-dock-btn svg { width: 18px; height: 18px; }
+  body { padding-bottom: 76px; }
+}
+
+/* ---------- 소개 영상(설정 VIDEO_ID가 있을 때만 표시) ---------- */
+.dn-video { padding: 32px var(--landing-gutter, 20px) 16px; }
+.dn-video[hidden] { display: none; }
+.dn-video-inner { max-width: 960px; margin: 0 auto; text-align: center; }
+.dn-video-eyebrow { margin: 0 0 8px; color: var(--brand-secondary, #7057ee); font-size: 15px; font-weight: 700; letter-spacing: -.3px; }
+.dn-video-title { margin: 0 0 32px; font-size: clamp(24px, 3.2vw, 36px); font-weight: 700; letter-spacing: -.8px; line-height: 1.3; color: var(--foreground, #20243a); }
+.dn-video-frame { position: relative; aspect-ratio: 16 / 9; border-radius: 24px; overflow: hidden; background: #0e0e14; box-shadow: 0 24px 60px rgba(20, 20, 80, .16); }
+.dn-video-frame iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+.dn-video-play { position: absolute; inset: 0; width: 100%; height: 100%; padding: 0; border: 0; background: #000; cursor: pointer; }
+.dn-video-thumb { width: 100%; height: 100%; object-fit: cover; display: block; opacity: .92; transition: transform .4s, opacity .3s; }
+.dn-video-play:hover .dn-video-thumb { transform: scale(1.02); opacity: 1; }
+.dn-video-btn { position: absolute; left: 50%; top: 50%; width: 76px; height: 76px; margin: -38px 0 0 -38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; background: var(--brand-primary, #3157f6); color: #fff; box-shadow: 0 12px 32px rgba(0,0,0,.35); transition: transform .2s; }
+.dn-video-btn svg { margin-left: 4px; }
+.dn-video-play:hover .dn-video-btn { transform: scale(1.06); }
+.dn-video-play:focus-visible { outline: 3px solid #fff; outline-offset: -6px; }
+.dn-video-caption { margin: 14px 0 0; font-size: 14px; color: #5b6178; }
+@media (max-width: 899px) { .dn-video-frame { border-radius: 16px; } .dn-video-btn { width: 60px; height: 60px; margin: -30px 0 0 -30px; } }
+
+/* ---------- 폼 아래 카카오 대안 ---------- */
+.dn-alt { display: flex; flex-direction: column; align-items: center; gap: 10px; margin-top: 4px; color: #fff; }
+.dn-alt-or { font-size: 13px; opacity: .8; }
+.dn-kakao-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 52px; padding: 0 22px 0 18px; border-radius: 999px; background: #fee500; color: #191919; font-size: 16px; font-weight: 700; letter-spacing: -.3px; transition: transform .2s, background .2s; }
+.dn-kakao-btn:hover { background: #f5dc00; transform: translateY(-1px); }
+.dn-kakao-btn[hidden] { display: none; }
+.dn-alt small { font-size: 13px; opacity: .85; }
+.dn-thanks .dn-kakao-btn { margin-top: 12px; }
+
+@media (prefers-reduced-motion: reduce) { .dn-dock, .dn-dock-btn, .dn-video-thumb, .dn-video-btn { transition: none; } }
