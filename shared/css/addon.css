@@ -105,3 +105,4 @@ html[data-variant="b"] .dn-price-a { display: none !important; }
 /* ---------- 제안서 받기 모드(?offer=pdf) ---------- */
 .dn-offer-note { margin: 0 0 16px; font-size: 16px; line-height: 1.5; letter-spacing: -.3px; color: inherit; opacity: .9; }
 .dn-thanks .dn-pdf-btn { margin: 16px 0 8px; }
+.dn-hero-offer { margin: 10px 0 0; font-size: 15px; line-height: 1.55; letter-spacing: -.3px; color: var(--brand-primary, #3157f6); font-weight: 600; max-width: 34em; }

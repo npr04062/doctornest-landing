@@ -61,6 +61,9 @@
   if (T) {
     document.documentElement.setAttribute('data-offer', 'pdf-' + T.key);
     $$('a[href="#consultation"]', document).forEach(function (a) { var sp = a.querySelector('span'); (sp || a).textContent = T.cta; });
+    // 첫 화면에서도 광고가 약속한 것을 바로 말한다(폼 위 안내와 같은 문장, 2026-10-04 랜딩 평가 1번)
+    var heroActs = $('.landing-module__i9Fx1W__heroActions'), heroSub = heroActs && heroActs.parentElement.querySelector('.dn-hero-sub');
+    if (heroActs) (heroSub || heroActs).insertAdjacentHTML('afterend', '<p class="dn-hero-offer">' + T.note + '</p>');
   }
 
   /* ---------- 소개 영상(설정 VIDEO_ID): 썸네일 먼저, 클릭하면 유튜브 플레이어 ---------- */
@@ -356,6 +359,8 @@
     if (T) {
       submit.textContent = T.submit;
       form.insertAdjacentHTML('beforebegin', '<p class="dn-offer-note">' + T.note + '</p>');
+      var srcField = form.querySelector('.consultation-form-module___58eVG__sourceField');  // 랜딩 평가 2번: 광고 방문자는 경로를 묻지 않는다
+      if (srcField) srcField.hidden = true;
       var biz = form.elements.businessName, bizLab = biz && biz.closest('label');  // 제안서 모드는 병원 이름 필수: 전화번호와 같은 * 표시
       if (biz) { biz.required = true; biz.setAttribute('aria-required', 'true'); }
       if (bizLab && bizLab.firstElementChild) bizLab.firstElementChild.insertAdjacentHTML('beforeend', '<span class="consultation-form-module___58eVG__required" aria-hidden="true"> *</span>');
@@ -461,19 +466,43 @@
     if (!name) return;
     track(name, { location: a.dataset.loc || (a.closest('section,header,footer') || {}).id || (a.closest('header') ? 'header' : a.closest('footer') ? 'footer' : 'floating'), label: (a.textContent || '').trim().slice(0, 40), href: href.slice(0, 120) });
   }, true);
+  /* 랜딩 평가 3번(2026-10-04): 안쪽 링크(#…)를 눌러 자동으로 스크롤되는 동안 지나간 섹션은 읽은 것이 아니므로 세지 않는다.
+     스크롤이 250ms 멈추면 끝난 것으로 보고, 그때 화면에 보이는 섹션만 센다. */
+  var autoScroll = false, autoTimer = 0;
+  var endAuto = function () { autoScroll = false; recheck(); };
+  document.addEventListener('click', function (e) {
+    var a = e.target.closest && e.target.closest('a[href^="#"]');
+    if (!a || a.getAttribute('href').length < 2) return;
+    autoScroll = true; clearTimeout(autoTimer); autoTimer = setTimeout(endAuto, 1500);
+  }, true);
+  addEventListener('scroll', function () { if (autoScroll) { clearTimeout(autoTimer); autoTimer = setTimeout(endAuto, 250); } }, { passive: true });
   var seen = {};
+  var markSeen = function (id) {
+    if (seen[id]) return;
+    seen[id] = true;
+    track('section_view', { section: id });
+    if (id === 'pricing') track('pricing_view', {});
+  };
+  var recheck = function () {
+    ['about', 'video', 'difference', 'product', 'care', 'results', 'pricing', 'faq', 'consultation'].forEach(function (id) {
+      var el = document.getElementById(id); if (!el || seen[id]) return;
+      var r = el.getBoundingClientRect(), vis = Math.min(r.bottom, innerHeight) - Math.max(r.top, 0);
+      if (vis > 0 && vis >= Math.min(r.height, innerHeight) * 0.3) markSeen(id);
+    });
+  };
   var secIo = new IntersectionObserver(function (es) {
     es.forEach(function (en) {
-      if (!en.isIntersecting || seen[en.target.id]) return;
-      seen[en.target.id] = true;
-      track('section_view', { section: en.target.id });
-      if (en.target.id === 'pricing') track('pricing_view', {});
+      if (autoScroll || !en.isIntersecting || seen[en.target.id]) return;
+      // 화면보다 긴 섹션(difference 2,900px 등)은 비율 0.3에 닿지 못하므로, 보이는 높이가 화면 또는 섹션의 30% 이상이면 도달로 본다
+      if (en.intersectionRect.height < Math.min(en.boundingClientRect.height, innerHeight) * 0.3) return;
+      markSeen(en.target.id);
       secIo.unobserve(en.target);
     });
-  }, { threshold: 0.3 });
+  }, { threshold: [0, 0.1, 0.2, 0.3] });
   ['about', 'video', 'difference', 'product', 'care', 'results', 'pricing', 'faq', 'consultation'].forEach(function (id) { var s = document.getElementById(id); s && secIo.observe(s); });
   var depths = [25, 50, 75, 90], fired = {};
   addEventListener('scroll', function () {
+    if (autoScroll) return;  // 버튼으로 내려가는 중의 깊이는 읽은 깊이가 아니다
     var max = document.documentElement.scrollHeight - innerHeight; if (max <= 0) return;
     var pct = Math.round(scrollY / max * 100);
     depths.forEach(function (d) { if (pct >= d && !fired[d]) { fired[d] = true; track('scroll_depth', { percent: d }); } });
