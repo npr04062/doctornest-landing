@@ -22,6 +22,13 @@
       var keys = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term', 'gclid', 'fbclid', 'ttclid'];
       var o = {}, hit = false;
       keys.forEach(function (k) { var val = q.get(k); if (val) { o[k] = val.slice(0, 120); hit = true; } });
+      // 네이버 검색광고 자동 추적(2026-10-04): n_keyword(입찰 키워드)·n_query(실제 검색어)·n_rank(노출 순위)를
+      // utm_term 에 함께 남긴다. 접수 브리지가 utm_term 칸을 그대로 저장하므로 시트에서 키워드별 신청을 볼 수 있다.
+      var nk = q.get('n_keyword'), nq = q.get('n_query'), nr = q.get('n_rank');
+      if (nk || nq) {
+        o.utm_term = ((nk || '') + (nq && nq !== nk ? ' / 검색어 ' + nq : '') + (nr ? ' / ' + nr + '위' : '')).slice(0, 120);
+        hit = true;
+      }
       if (hit || !cur) {
         o.ref = (document.referrer || '').slice(0, 200);
         o.landing = (location.pathname + location.search).slice(0, 200);
