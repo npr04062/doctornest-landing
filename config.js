@@ -14,5 +14,7 @@ window.DN_CONFIG = {
   PHONE_RAW: '01020644352',
   PHONE_DISPLAY: '010-2064-4352',
   OFFICIAL_SITE: 'https://www.doctornest.ai',
+  PROPOSAL_FILE: 'files/proposal/',  // ASSET_BASE 기준. 제안서 보기 페이지(상품설명서 260904 1~12쪽 이미지, 아래에 PDF 받기). tools/make_proposal.py 로 생성
+  OFFER_DEFAULT: '',                 // 'pdf'면 제안서 받기 모드가 기본. 비우면 URL에 ?offer=pdf 가 있을 때만
   DEBUG: false                       // true면 콘솔에 트래킹 이벤트를 출력한다
 };

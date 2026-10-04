@@ -101,3 +101,7 @@ html[data-variant="b"] .dn-price-a { display: none !important; }
 .dn-thanks .dn-kakao-btn { margin-top: 12px; }
 
 @media (prefers-reduced-motion: reduce) { .dn-dock, .dn-dock-btn, .dn-video-thumb, .dn-video-btn { transition: none; } }
+
+/* ---------- 제안서 받기 모드(?offer=pdf) ---------- */
+.dn-offer-note { margin: 0 0 16px; font-size: 16px; line-height: 1.5; letter-spacing: -.3px; color: inherit; opacity: .9; }
+.dn-thanks .dn-pdf-btn { margin: 16px 0 8px; }

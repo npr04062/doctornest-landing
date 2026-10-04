@@ -31,6 +31,29 @@
   var kakaoUrl = (CFG.KAKAO_CHAT_URL || '').trim();
   $$('[data-kakao]', document).forEach(function (a) { if (kakaoUrl) { a.href = kakaoUrl; a.hidden = false; } else { a.hidden = true; } });
 
+  /* ---------- 제안서 받기 모드(2026-10-04): ?offer=pdf 또는 설정 OFFER_DEFAULT='pdf', 파일은 설정 PROPOSAL_FILE ----------
+     ?cta=a|b|c|d 로 광고 CTA 문구 A/B 테스트와 같은 문구를 쓴다(대표 확정 네 가지, 없으면 a). 문구 humanize-korean run 2026-10-04-005 */
+  var qs = new URLSearchParams(location.search);
+  var offerParam = qs.get('offer'), ctaKey = (qs.get('cta') || 'a').toLowerCase();
+  var pdfUrl = CFG.PROPOSAL_FILE ? (CFG.ASSET_BASE || 'shared/') + CFG.PROPOSAL_FILE : '';
+  var OFFERS = {
+    a: { cta: '제안서 받아보기', note: '병원 이름과 연락처를 남기시면 제안서(PDF 12쪽)를 바로 받아 보실 수 있어요.',
+         done: '접수되었어요. 제안서를 바로 받아 보세요.', pdf: '제안서 바로 보기', toast: '접수되었어요. 아래에서 제안서를 받아 보세요.' },
+    b: { cta: '닥터네스트 소개서 받아보기', note: '병원 이름과 연락처를 남기시면 소개서(PDF 12쪽)를 바로 받아 보실 수 있어요.',
+         done: '접수되었어요. 소개서를 바로 받아 보세요.', pdf: '소개서 바로 보기', toast: '접수되었어요. 아래에서 소개서를 받아 보세요.', view: '?t=intro' },
+    c: { cta: '15분 화면 시연 받아보기', note: '병원 이름과 연락처를 남기시면 담당자가 15분 화면 시연 일정을 잡아 드려요. 기다리시는 동안 제안서를 먼저 보실 수 있어요.',
+         done: '접수되었어요. 담당자가 곧 시연 일정을 잡아 드릴게요.', pdf: '제안서 먼저 보기', toast: '접수되었어요. 담당자가 곧 연락드릴게요.' },
+    d: { cta: '연말 특가 조건 받아보기', note: '병원 이름과 연락처를 남기시면 2026년 12월 31일까지 적용되는 월 99,000원(VAT 포함) 조건과 제안서를 바로 받아 보실 수 있어요.',
+         done: '접수되었어요. 특가 조건과 제안서를 바로 확인해 보세요.', pdf: '특가 조건과 제안서 보기', toast: '접수되었어요. 아래에서 특가 조건을 확인해 보세요.' }
+  };
+  if (!OFFERS[ctaKey]) ctaKey = 'a';
+  var T = pdfUrl && (offerParam ? offerParam === 'pdf' : CFG.OFFER_DEFAULT === 'pdf') ? Object.assign({ submit: OFFERS[ctaKey].cta, key: ctaKey }, OFFERS[ctaKey]) : null;
+  if (T && T.view) pdfUrl += T.view;
+  if (T) {
+    document.documentElement.setAttribute('data-offer', 'pdf-' + T.key);
+    $$('a[href="#consultation"]', document).forEach(function (a) { var sp = a.querySelector('span'); (sp || a).textContent = T.cta; });
+  }
+
   /* ---------- 소개 영상(설정 VIDEO_ID): 썸네일 먼저, 클릭하면 유튜브 플레이어 ---------- */
   var videoSec = document.getElementById('video');
   if (videoSec && /^[A-Za-z0-9_-]{6,}$/.test(CFG.VIDEO_ID || '')) {
@@ -319,8 +342,15 @@
       form.setAttribute('aria-busy', String(s === 'sending'));
       if (fieldset) fieldset.disabled = (s === 'sending');
       submit.disabled = (s !== 'idle');
-      submit.textContent = s === 'sending' ? '접수 중…' : s === 'done' ? '신청 완료' : '무료 상담하기';
+      submit.textContent = s === 'sending' ? '접수 중…' : s === 'done' ? '신청 완료' : (T ? T.submit : '무료 상담하기');
     };
+    if (T) {
+      submit.textContent = T.submit;
+      form.insertAdjacentHTML('beforebegin', '<p class="dn-offer-note">' + T.note + '</p>');
+      var biz = form.elements.businessName, bizLab = biz && biz.closest('label');  // 제안서 모드는 병원 이름 필수: 전화번호와 같은 * 표시
+      if (biz) { biz.required = true; biz.setAttribute('aria-required', 'true'); }
+      if (bizLab && bizLab.firstElementChild) bizLab.firstElementChild.insertAdjacentHTML('beforeend', '<span class="consultation-form-module___58eVG__required" aria-hidden="true"> *</span>');
+    }
     if (phone) phone.addEventListener('input', function () {
       var d = phone.value.replace(/\D/g, '').slice(0, 11), i = d.indexOf('02') === 0 ? 2 : 3;
       phone.value = d.length <= i ? d : d.length <= i + 4 ? d.slice(0, i) + '-' + d.slice(i) : d.slice(0, i) + '-' + d.slice(i, -4) + '-' + d.slice(-4);
@@ -355,6 +385,7 @@
         return v.trim() || null;
       };
       var businessName = clean('businessName'), contactName = clean('contactName');
+      if (T && !businessName && !errors.businessName) errors.businessName = '병원 이름을 입력해 주세요.';  // 제안서 모드는 병원 이름 필수
       var raw = (phone ? phone.value : '').trim(), digits = raw.replace(/[\s()-]/g, '');
       if (!raw) errors.phone = '연락받으실 전화번호를 입력해 주세요.';
       else if (!/^0\d{8,10}$/.test(digits) || raw.length > 30) errors.phone = '연락 가능한 전화번호를 확인해 주세요.';
@@ -367,10 +398,12 @@
     var showThanks = function () {
       var box = document.createElement('div');
       box.className = 'dn-thanks'; box.setAttribute('role', 'status');
-      box.innerHTML = '<strong>상담 신청이 접수되었어요.</strong><p>담당자가 곧 연락드릴게요. 바로 통화를 원하시면 아래 번호로 전화해 주세요.</p>' +
+      box.innerHTML = (T ? '<strong>' + T.done + '</strong><a class="landing-module__i9Fx1W__consultationButton dn-pdf-btn" href="' + pdfUrl + '" target="_blank" rel="noopener" data-track="proposal_download" data-loc="thanks">' + T.pdf + '</a>' : '<strong>상담 신청이 접수되었어요.</strong>') +
+        '<p>담당자가 곧 연락드릴게요. 바로 통화를 원하시면 아래 번호로 전화해 주세요.</p>' +
         '<a class="landing-module__i9Fx1W__consultationButton" href="tel:' + (CFG.PHONE_RAW || '') + '" data-track="phone_click" data-loc="thanks">' + (CFG.PHONE_DISPLAY || '') + ' 전화하기</a>' +
         (kakaoUrl ? '<br><a class="dn-kakao-btn" href="' + kakaoUrl + '" target="_blank" rel="noopener" data-track="kakao_click" data-loc="thanks">카카오톡으로 이어서 상담</a>' : '');
       form.hidden = true;
+      var offerNote = document.querySelector('.dn-offer-note'); if (offerNote) offerNote.hidden = true;
       form.insertAdjacentElement('afterend', box);
     };
     form.addEventListener('submit', function (e) {
@@ -383,7 +416,7 @@
       if (!CFG.LEAD_ENDPOINT) { fail({}, '접수 서버가 아직 연결되지 않았습니다. 전화로 문의해 주세요.'); return; }
       sending = true; setState('sending');
       var body = Object.assign({}, v.data, {
-        requestKey: reqKey, website: new FormData(form).get('website') || '', variant: variant, brand: CFG.BRAND || '',
+        requestKey: reqKey, website: new FormData(form).get('website') || '', variant: variant, brand: CFG.BRAND || '', offer: T ? 'pdf-' + T.key : '',
         page: location.href.slice(0, 300), referrer: (document.referrer || '').slice(0, 300),
         attrib: window.dnAttrib ? window.dnAttrib() : {}, userAgent: navigator.userAgent.slice(0, 200), submittedAt: new Date().toISOString()
       });
@@ -399,7 +432,7 @@
         .then(function (r) {
           if (!r.ok) { setState('idle'); fail(r.errors, r.error || '접수하지 못했어요. 잠시 후 다시 시도해 주세요.'); return; }
           setState('done');
-          toast('success', '상담 신청이 접수되었어요. 담당자가 곧 연락드릴게요.');
+          toast('success', T ? T.toast : '상담 신청이 접수되었어요. 담당자가 곧 연락드릴게요.');
           showThanks();
           track('generate_lead', { source: v.data.source || '', request_key: reqKey });
         })
