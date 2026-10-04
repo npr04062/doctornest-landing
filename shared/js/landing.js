@@ -36,7 +36,7 @@
   var qs = new URLSearchParams(location.search);
   var offerParam = qs.get('offer'), ctaKey = (qs.get('cta') || 'a').toLowerCase();
   var pdfUrl = CFG.PROPOSAL_FILE ? (CFG.ASSET_BASE || 'shared/') + CFG.PROPOSAL_FILE : '';
-  var OFFERS = {
+  var OFFERS = {  // 닥터네스트 CTA A/B 네 칸
     a: { cta: '제안서 받아보기', note: '병원 이름과 연락처를 남기시면 제안서(PDF 12쪽)를 바로 받아 보실 수 있어요.',
          done: '접수되었어요. 제안서를 바로 받아 보세요.', pdf: '제안서 바로 보기', toast: '접수되었어요. 아래에서 제안서를 받아 보세요.' },
     b: { cta: '닥터네스트 소개서 받아보기', note: '병원 이름과 연락처를 남기시면 소개서(PDF 12쪽)를 바로 받아 보실 수 있어요.',
@@ -46,6 +46,15 @@
     d: { cta: '연말 특가 조건 받아보기', note: '병원 이름과 연락처를 남기시면 2026년 12월 31일까지 적용되는 월 99,000원(VAT 포함) 조건과 제안서를 바로 받아 보실 수 있어요.',
          done: '접수되었어요. 특가 조건과 제안서를 바로 확인해 보세요.', pdf: '특가 조건과 제안서 보기', toast: '접수되었어요. 아래에서 특가 조건을 확인해 보세요.' }
   };
+  if (CFG.BRAND === 'beautynest') {  // 뷰티네스트(2026-10-04): 광고 이미지 버튼과 같은 문구. 문구 humanize-korean run 2026-10-04-007
+    OFFERS = {
+      demo: { cta: '15분 화면 시연 신청', note: '샵 이름과 연락처를 남기시면 담당자가 15분 화면 시연 일정을 잡아 드려요. 기다리시는 동안 소개서를 먼저 보실 수 있어요.',
+              done: '접수되었어요. 담당자가 곧 시연 일정을 잡아 드릴게요.', pdf: '소개서 먼저 보기', toast: '접수되었어요. 담당자가 곧 연락드릴게요.' },
+      call: { cta: '5분 무료 통화상담', note: '샵 이름과 연락처를 남기시면 담당자가 5분 통화로 요금과 이용 방법을 안내해 드려요. 기다리시는 동안 소개서를 먼저 보실 수 있어요.',
+              done: '접수되었어요. 담당자가 곧 전화드릴게요.', pdf: '소개서 먼저 보기', toast: '접수되었어요. 담당자가 곧 연락드릴게요.' }
+    };
+    if (!OFFERS[ctaKey]) ctaKey = 'demo';
+  }
   if (!OFFERS[ctaKey]) ctaKey = 'a';
   var T = pdfUrl && (offerParam ? offerParam === 'pdf' : CFG.OFFER_DEFAULT === 'pdf') ? Object.assign({ submit: OFFERS[ctaKey].cta, key: ctaKey }, OFFERS[ctaKey]) : null;
   if (T && T.view) pdfUrl += T.view;
@@ -385,7 +394,7 @@
         return v.trim() || null;
       };
       var businessName = clean('businessName'), contactName = clean('contactName');
-      if (T && !businessName && !errors.businessName) errors.businessName = '병원 이름을 입력해 주세요.';  // 제안서 모드는 병원 이름 필수
+      if (T && !businessName && !errors.businessName) errors.businessName = CFG.BRAND === 'beautynest' ? '샵 이름을 입력해 주세요.' : '병원 이름을 입력해 주세요.';  // 제안서 모드는 업체 이름 필수
       var raw = (phone ? phone.value : '').trim(), digits = raw.replace(/[\s()-]/g, '');
       if (!raw) errors.phone = '연락받으실 전화번호를 입력해 주세요.';
       else if (!/^0\d{8,10}$/.test(digits) || raw.length > 30) errors.phone = '연락 가능한 전화번호를 확인해 주세요.';
