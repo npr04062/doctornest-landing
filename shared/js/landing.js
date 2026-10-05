@@ -66,6 +66,40 @@
     if (heroActs) (heroSub || heroActs).insertAdjacentHTML('afterend', '<p class="dn-hero-offer">' + T.note + '</p>');
   }
 
+  /* ---------- 광고별 첫 화면 + 첫 화면 가격(2026-10-06, 대표 승인 "너가 얘기한 순서대로 진행해") ----------
+     국내 메타 유입 열 명 중 일곱 명이 첫 화면에서 나갔다. 광고에서 본 말(태블릿 서명, 월 99,000원)이 첫 화면에 없었다.
+     utm_content의 소재 번호(dn07_b → dn07, bnU7 → bnu7)로 첫 화면 제목을 그 광고 문구로 바꾼다. 문구는 광고 이미지·본문에 쓴
+     승인 문구 그대로다(새로 쓰지 않음). 목록에 없는 소재나 직접 방문은 원래 첫 화면을 그대로 둔다.
+     가격 한 줄은 DN-09 광고 이미지의 요금 상자 문구 그대로이고, 변형 b 방문자 모두에게 보인다. */
+  var hero = $('#about [data-reveal-group]');
+  var promoOn = Date.now() < Date.parse('2027-01-01T00:00:00+09:00');   // 연말 특가 문구(월 99,000원)는 2026-12-31까지만
+  if (hero && variant === 'b' && promoOn) {
+    var adKey = (qs.get('utm_content') || '').toLowerCase().replace(/_[a-d]$/, '');
+    var HERO = {
+      dn07: { title: '수백만 원짜리 병원 마케팅 오퍼레이션 시스템,<br>월 9만 9천 원 특가 프로모션.' },
+      dn09: { title: 'CRM 따로, 마케팅 대행사 따로,<br>DB 마케팅 따로 왜 돈 쓰세요?', copy: '닥터네스트 하나면 전부 해결됩니다.' },
+      dn30: { title: '비싼 광고비로 데려온 신환,<br>경쟁 병원으로 도망치게 방치하고 계십니까?' },
+      bnu7: { title: '종이 동의서 대신<br>태블릿에 손님이 바로 서명해요.', copy: '이지차트는 월 이용료에 포함돼 있어요.',
+              img: 'img/ad-bnu7-tablet.webp', alt: '이지차트 반영구 시술 동의서에 손님이 태블릿으로 서명하는 화면 예시' }
+    };
+    var H = CFG.BRAND === 'beautynest' ? (adKey.indexOf('bn') === 0 ? HERO[adKey] : null) : (adKey.indexOf('dn') === 0 ? HERO[adKey] : null);
+    if (H) {
+      var eyebrow = $('.landing-module__i9Fx1W__eyebrow', hero), h1 = $('h1', hero), copy = $('.landing-module__i9Fx1W__heroCopy', hero);
+      if (eyebrow) eyebrow.hidden = true;             // "닥터네스트는" 뒤에 광고 문장이 이어지면 어색하다
+      if (h1) { h1.innerHTML = H.title; h1.classList.add('dn-hero-ad'); }
+      if (copy && H.copy) copy.textContent = H.copy;
+      var stage = $('#about .landing-module__i9Fx1W__heroStage');
+      if (H.img && stage) {
+        stage.innerHTML = '<img class="dn-hero-adimg" src="' + (CFG.ASSET_BASE || 'shared/') + H.img + '" alt="' + H.alt + '" width="1200" height="891" decoding="async" fetchpriority="high">';
+        stage.parentElement.classList.add('dn-hero-adtrack');
+      }
+      document.documentElement.setAttribute('data-hero', adKey);
+    }
+    var heroCopyEl = $('.landing-module__i9Fx1W__heroCopy', hero), oldSub = $('.dn-hero-sub', hero);
+    if (heroCopyEl) heroCopyEl.insertAdjacentHTML('afterend', '<p class="dn-hero-price"><strong>월 99,000원 · 2026년 12월 31일까지</strong><span>VAT 포함 · 설치비 0원 · 약정 없음 · 이후 월 330,000원</span></p>');
+    if (oldSub) oldSub.hidden = true;                  // "설치비 0원 · 1년 약정 없이…"는 가격 줄과 겹친다
+  }
+
   /* ---------- 소개 영상(설정 VIDEO_ID): 썸네일 먼저, 클릭하면 유튜브 플레이어 ---------- */
   var videoSec = document.getElementById('video');
   if (videoSec && /^[A-Za-z0-9_-]{6,}$/.test(CFG.VIDEO_ID || '')) {

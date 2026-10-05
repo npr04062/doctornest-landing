@@ -112,3 +112,13 @@ html[data-variant="b"] .dn-price-a { display: none !important; }
 .dn-field-error { display: block; margin-top: 2px; padding: 8px 12px; border-radius: 10px; background: #fff; color: #d92d20; font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: -.2px; text-align: left; }
 .dn-consent + .dn-field-error { margin-top: -20px; align-self: stretch; }  /* 폼 flex gap 32px 안에서 동의 칸 바로 아래에 붙인다 */
 .dn-consent input[aria-invalid="true"] { outline-color: #fff; }
+
+/* 2026-10-06 광고별 첫 화면 + 첫 화면 가격(landing.js '광고별 첫 화면'). 광고 문장이 원래 제목보다 길어 모바일에서 한 단계 줄인다. */
+.dn-hero-ad { text-wrap: balance; word-break: keep-all; }
+@media (max-width: 767px) { .landing-module__i9Fx1W__hero h1.dn-hero-ad { font-size: 24px; line-height: 33px; } }
+.landing-module__i9Fx1W__landing p.dn-hero-price { margin: 14px 0 0; }  /* 원본 :is(h1,h2,h3,p){margin:0}보다 우선 */
+.dn-hero-price strong { display: block; font-size: 17px; line-height: 1.45; font-weight: 700; letter-spacing: -.3px; color: var(--brand-primary, #3157f6); }
+.dn-hero-price span { display: block; margin-top: 2px; font-size: 13px; line-height: 1.5; color: #5b6178; }
+.dn-hero-adtrack { height: auto !important; }
+.dn-hero-adtrack .landing-module__i9Fx1W__heroStage { aspect-ratio: auto; overflow: visible; background: transparent; border-radius: 0; }  /* 원래 무대는 3024:1706 비율로 잘라 보여 준다 */
+.dn-hero-adimg { display: block; width: 100%; max-width: 760px; height: auto; margin: 0 auto; }  /* 그림 자체에 태블릿 모서리가 있어 따로 깎지 않는다(아래 안내 문구가 잘림) */
