@@ -432,7 +432,8 @@
       if (T && !businessName && !errors.businessName) errors.businessName = CFG.BRAND === 'beautynest' ? '샵 이름을 입력해 주세요.' : '병원 이름을 입력해 주세요.';  // 제안서 모드는 업체 이름 필수
       var raw = (phone ? phone.value : '').trim(), digits = raw.replace(/[\s()-]/g, '');
       if (!raw) errors.phone = '연락받으실 전화번호를 입력해 주세요.';
-      else if (!/^0\d{8,10}$/.test(digits) || raw.length > 30) errors.phone = '연락 가능한 전화번호를 확인해 주세요.';
+      else if (!/^010/.test(digits)) errors.phone = '휴대폰 번호(010)로 입력해 주세요.';  // 2026-10-05 대표 지시: 010 휴대폰 번호만 받는다(유선·임의 번호는 접수 브리지에서 허위 DB로 분류됨)
+      else if (!/^010\d{8}$/.test(digits) || raw.length > 30) errors.phone = '연락 가능한 전화번호를 확인해 주세요.';
       var srcEl = form.querySelector('input[name=source]:checked'), src = srcEl ? srcEl.value : '';
       if (src && !SOURCES[src]) errors.source = '서비스를 알게 된 경로를 다시 선택해 주세요.';
       var consent = form.elements.consent;
