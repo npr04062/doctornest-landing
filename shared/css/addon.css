@@ -106,3 +106,9 @@ html[data-variant="b"] .dn-price-a { display: none !important; }
 .dn-offer-note { margin: 0 0 16px; font-size: 16px; line-height: 1.5; letter-spacing: -.3px; color: inherit; opacity: .9; }
 .dn-thanks .dn-pdf-btn { margin: 16px 0 8px; }
 .dn-hero-offer { margin: 10px 0 0; font-size: 15px; line-height: 1.55; letter-spacing: -.3px; color: var(--brand-primary, #3157f6); font-weight: 600; max-width: 34em; }
+
+/* 2026-10-05: 신청 폼 오류 안내를 칸 바로 아래에 남긴다(토스트는 3초 뒤 사라져 놓치기 쉽다).
+   배경이 브랜드 그라데이션(닥터네스트 파랑·뷰티네스트 주황)이라 흰 바탕 상자에 빨간 글자로 둘 다 읽히게 한다. */
+.dn-field-error { display: block; margin-top: 2px; padding: 8px 12px; border-radius: 10px; background: #fff; color: #d92d20; font-size: 14px; font-weight: 600; line-height: 1.45; letter-spacing: -.2px; text-align: left; }
+.dn-consent + .dn-field-error { margin-top: -20px; align-self: stretch; }  /* 폼 flex gap 32px 안에서 동의 칸 바로 아래에 붙인다 */
+.dn-consent input[aria-invalid="true"] { outline-color: #fff; }

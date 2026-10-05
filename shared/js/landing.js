@@ -348,7 +348,7 @@
     var fieldset = form.querySelector('fieldset.consultation-form-module___58eVG__fields');
     var submit = form.querySelector('button[type=submit]');
     var phone = form.elements.phone;
-    var state = 'idle', sending = false, reqKey = null, lastPayload = null, toastTimer = 0, started = false;
+    var state = 'idle', sending = false, reqKey = null, lastPayload = null, toastTimer = 0, started = false, errCount = 0;
     var setState = function (s) {
       state = s;
       form.setAttribute('aria-busy', String(s === 'sending'));
@@ -369,7 +369,29 @@
       var d = phone.value.replace(/\D/g, '').slice(0, 11), i = d.indexOf('02') === 0 ? 2 : 3;
       phone.value = d.length <= i ? d : d.length <= i + 4 ? d.slice(0, i) + '-' + d.slice(i) : d.slice(0, i) + '-' + d.slice(i, -4) + '-' + d.slice(-4);
     });
-    form.addEventListener('input', function (e) { if (e.target && e.target.removeAttribute) e.target.removeAttribute('aria-invalid'); if (state !== 'done') setState('idle'); });
+    /* 2026-10-05: 오류 안내를 칸 바로 아래에 고쳐 쓸 때까지 남긴다. 10/5 국내 방문자 1명이 신청 버튼을 6번 누르고 나갔는데,
+       안내가 3초 뜨고 사라지는 토스트뿐이라 어느 칸이 문제인지 알기 어려웠다. */
+    var clearErr = function (el) {
+      if (!el || !el.name || !el.removeAttribute) return;
+      el.removeAttribute('aria-invalid'); el.removeAttribute('aria-describedby');
+      var p = document.getElementById('dn-err-' + el.name); if (p) p.remove();
+    };
+    var showErrors = function (errors) {
+      var shown = 0;
+      Array.prototype.forEach.call(form.querySelectorAll('.dn-field-error'), function (p) { p.remove(); });
+      Object.keys(errors).forEach(function (n) {
+        var el = form.elements.namedItem(n), lab = el && el.closest && el.closest('label');
+        if (!lab || !errors[n]) return;
+        var p = document.createElement('span');
+        p.className = 'dn-field-error'; p.id = 'dn-err-' + n; p.textContent = errors[n];
+        el.setAttribute('aria-invalid', 'true'); el.setAttribute('aria-describedby', p.id);
+        if (n === 'consent') lab.insertAdjacentElement('afterend', p); else lab.appendChild(p);
+        shown++;
+      });
+      return shown;
+    };
+    form.addEventListener('input', function (e) { clearErr(e.target); if (state !== 'done') setState('idle'); });
+    form.addEventListener('change', function (e) { clearErr(e.target); });
     form.addEventListener('focusin', function () { if (!started) { started = true; track('form_start', {}); } });
     var toast = function (kind, text) {
       var pos = document.querySelector('.consultation-form-module___58eVG__toastPosition');
@@ -388,8 +410,16 @@
     };
     var fail = function (errors, msg) {
       var first = Object.keys(errors)[0];
-      if (first) { var el = form.elements.namedItem(first); if (el && el.setAttribute) { el.setAttribute('aria-invalid', 'true'); el.focus && el.focus(); } }
-      toast('error', msg || errors[first] || '입력 내용을 확인해 주세요.');
+      var shown = showErrors(errors);
+      if (first) {
+        var el = form.elements.namedItem(first);
+        if (el && el.setAttribute) {
+          el.setAttribute('aria-invalid', 'true');
+          if (el.scrollIntoView) el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+          if (el.focus) el.focus({ preventScroll: true });
+        }
+      }
+      if (!shown || msg) toast('error', msg || errors[first] || '입력 내용을 확인해 주세요.');  // 칸 아래 안내가 떴으면 토스트는 생략(겹쳐서 가린다)
     };
     var validate = function () {
       var errors = {};
@@ -424,7 +454,7 @@
       e.preventDefault();
       if (sending || state === 'done') return;
       var v = validate();
-      if (!v.ok) { fail(v.errors); track('form_error', { field: Object.keys(v.errors)[0] }); return; }
+      if (!v.ok) { fail(v.errors); track('form_error', { field: Object.keys(v.errors).join(','), attempt: ++errCount }); return; }  // field: GA4 맞춤 측정기준 '오류 칸'
       var payloadStr = JSON.stringify(v.data);
       if (lastPayload !== payloadStr || !reqKey) { lastPayload = payloadStr; reqKey = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + '-' + Math.random().toString(16).slice(2)); }
       if (!CFG.LEAD_ENDPOINT) { fail({}, '접수 서버가 아직 연결되지 않았습니다. 전화로 문의해 주세요.'); return; }
