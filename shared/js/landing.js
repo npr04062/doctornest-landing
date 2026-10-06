@@ -80,7 +80,21 @@
       dn09: { title: 'CRM 따로, 마케팅 대행사 따로,<br>DB 마케팅 따로 왜 돈 쓰세요?', copy: '닥터네스트 하나면 전부 해결됩니다.' },
       dn30: { title: '비싼 광고비로 데려온 신환,<br>경쟁 병원으로 도망치게 방치하고 계십니까?' },
       bnu7: { title: '종이 동의서 대신<br>태블릿에 손님이 바로 서명해요.', copy: '이지차트는 월 이용료에 포함돼 있어요.',
-              img: 'img/ad-bnu7-tablet.webp', alt: '이지차트 반영구 시술 동의서에 손님이 태블릿으로 서명하는 화면 예시' }
+              img: 'img/ad-bnu7-tablet.webp', alt: '이지차트 반영구 시술 동의서에 손님이 태블릿으로 서명하는 화면 예시' },
+      // 2026-10-06 추가 소재(대표 승인 "둘 다 넣고 올려"). 제목은 각 광고 이미지 헤드라인, 설명은 광고 본문 둘째 줄 그대로
+      bnu7s: { title: '종이 동의서 대신<br>태블릿에 손님이 바로 서명해요.', copy: '이지차트는 월 이용료에 포함돼 있어요.',
+               img: 'img/ad-bnu7s-tablet.webp', alt: '이지차트 반영구 시술 동의서에 손님이 태블릿으로 서명하는 화면 예시' },
+      bnu7n: { title: '종이 동의서 대신<br>태블릿에 손님이 바로 서명해요.', copy: '이지차트는 월 이용료에 포함돼 있어요.',
+               img: 'img/ad-bnu7n-tablet.webp', alt: '이지차트 반영구 시술 동의서에 손님이 태블릿으로 이름을 적는 화면 예시' },
+      bnu10: { title: '이지차트에는 그날 받은 동의서가<br>날짜별로 그대로 남아 있어요.', copy: '월 이용료에 포함돼 있어요.',
+               img: 'img/ad-bnu10-tablet.webp', alt: '이지차트 시술 동의서 목록 화면 예시' },
+      bnu11: { title: '이지차트는 손님 이름만 치면<br>지난 시술 기록이 바로 떠요.', copy: '월 이용료에 포함돼 있어요.',
+               img: 'img/ad-bnu11-tablet.webp', alt: '이지차트 손님 찾기와 지난 시술 기록 화면 예시' },
+      bnu8: { title: '반영구·속눈썹·왁싱 차트를<br>태블릿에서 바로 꺼내 써요.', copy: '이지차트 쓰면 차트 살 일이 없어요.',
+              img: 'img/ad-bnu8-tablet.webp', alt: '이지차트 업종별 시술 상담 차트 템플릿 화면 예시' },
+      dn32: { title: '국내 SNS 문의부터 해외 메신저까지,<br>클릭 한 번으로 끊김 없이 응대하세요.' },
+      dn29b: { title: '플랜 등급·좌석 수·시술 개수<br>제한 없는 병원 전문 All-in-One 솔루션.' },
+      dn33: { title: '외국어 몰라도 괜찮습니다.<br>한국어로 답하면 환자 나라 말로 번역돼서 나갑니다.' }
     };
     var H = CFG.BRAND === 'beautynest' ? (adKey.indexOf('bn') === 0 ? HERO[adKey] : null) : (adKey.indexOf('dn') === 0 ? HERO[adKey] : null);
     if (H) {
@@ -90,7 +104,7 @@
       if (copy && H.copy) copy.textContent = H.copy;
       var stage = $('#about .landing-module__i9Fx1W__heroStage');
       if (H.img && stage) {
-        stage.innerHTML = '<img class="dn-hero-adimg" src="' + (CFG.ASSET_BASE || 'shared/') + H.img + '" alt="' + H.alt + '" width="1200" height="891" decoding="async" fetchpriority="high">';
+        stage.innerHTML = '<img class="dn-hero-adimg" src="' + (CFG.ASSET_BASE || 'shared/') + H.img + '" alt="' + H.alt + '" width="1200" height="901" decoding="async" fetchpriority="high">';
         stage.parentElement.classList.add('dn-hero-adtrack');
       }
       document.documentElement.setAttribute('data-hero', adKey);
