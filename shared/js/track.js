@@ -64,6 +64,17 @@
     window.fbq('track', 'PageView');
   }
 
+  /* Microsoft Clarity(방문자 화면 녹화·히트맵, 2026-10-08 대표 "클래리티도 붙여"). config.js의 CLARITY_ID가 비어 있으면 아무것도 안 한다.
+     입력칸 내용은 Clarity 기본 설정에서 가려진다. 로컬 미리보기는 GA4·픽셀과 같은 조건으로 뺀다. */
+  if (C.CLARITY_ID && loadTags) {
+    (function (c, l, a, r, i, t, y) {
+      c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments); };
+      t = l.createElement(r); t.async = 1; t.src = 'https://www.clarity.ms/tag/' + i;
+      y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    })(window, document, 'clarity', 'script', encodeURIComponent(C.CLARITY_ID));
+    window.clarity('set', 'variant', v);
+  }
+
   /* GA4 이벤트명 → 메타 표준 이벤트. 나머지는 trackCustom */
   var META = {
     generate_lead: ['Lead', { content_name: (C.BRAND || 'doctornest') + '_consult' }],

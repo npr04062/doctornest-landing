@@ -4,6 +4,7 @@ window.DN_CONFIG = {
   ASSET_BASE: 'shared/',           // 공용 자산 경로(index.html 기준)
   GA4_ID: 'G-TJB4WLLS0L',            // GA4 속성 '닥터네스트 랜딩'(계정 스트라디지 407058821, 스트림 15857779060, 2026-09-28 생성)
   PIXEL_ID: '1614368206735019',      // 메타 픽셀(비즈니스 소유 데이터세트, 리뷰지우개와 같은 광고 계정)
+  CLARITY_ID: 'yu9ww3q540',                 // Microsoft Clarity 프로젝트 ID(2026-10-08). 비우면 녹화 안 함. 대표가 clarity.microsoft.com에서 만든 ID를 넣는다
   LEAD_ENDPOINT: 'https://script.google.com/macros/s/AKfycbxhftD5G84IeTqyMjw-6KCWWnn-HgAfqTx4Scb8iNszBOaFuW1Yziw35jqePEHHgIgSdA/exec',   // Apps Script 웹 앱 '랜딩 접수 브리지' v1 (2026-09-28 배포, 시트 '랜딩 접수 (닥터네스트·뷰티네스트)')
   LEAD_MODE: 'no-cors',              // Apps Script는 'no-cors'. CORS를 허용하는 자체 API면 'cors'
   VARIANT_DEFAULT: 'a',              // 'a' 원본 그대로 / 'b' 전환 개선안. URL에 ?v=a 또는 ?v=b 를 붙이면 강제된다

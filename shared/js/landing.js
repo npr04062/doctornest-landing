@@ -73,7 +73,9 @@
      가격 한 줄은 DN-09 광고 이미지의 요금 상자 문구 그대로이고, 변형 b 방문자 모두에게 보인다. */
   var hero = $('#about [data-reveal-group]');
   var promoOn = Date.now() < Date.parse('2027-01-01T00:00:00+09:00');   // 연말 특가 문구(월 99,000원)는 2026-12-31까지만
-  if (hero && variant === 'b' && promoOn) {
+  // 2026-10-07 대표 승인: 뷰티네스트는 10/5 첫 화면으로 되돌린다(광고별 제목·가격 줄 끔). 이 변경 뒤 10/6~7 신청 0건,
+  // 스크롤 74→48%, 신청서 시작 11→4%. 이틀 시험 후 판정. 닥터네스트는 그대로.
+  if (hero && variant === 'b' && promoOn && CFG.BRAND !== 'beautynest') {
     var adKey = (qs.get('utm_content') || '').toLowerCase().replace(/_[a-d]$/, '');
     var HERO = {
       dn07: { title: '수백만 원짜리 병원 마케팅 오퍼레이션 시스템,<br>월 9만 9천 원 특가 프로모션.' },
